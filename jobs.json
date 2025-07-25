@@ -1,0 +1,22 @@
+[
+    {
+        "title": "Job printer",
+        "description": "Print from JSON File"
+    },
+    {
+        "title": "Job printer",
+        "description": "Get simple rest API working"
+    },
+    {
+        "title": "Job printer",
+        "description": "Get scheduled tasks working"
+    },
+    {
+        "title": "Job printer",
+        "description": "Implement a basic UI"
+    },
+    {
+        "title": "Job printer",
+        "description": "Set up on RPi"
+    }
+]
