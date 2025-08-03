@@ -1,0 +1,9 @@
+FROM ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:latest
+
+RUN dpkg --add-architecture armhf && \
+    apt-get update && \
+    apt-get install -y \
+        libc6-dev:armhf \
+        libc6:armhf \
+        libudev-dev:armhf \
+        pkg-config

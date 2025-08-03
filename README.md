@@ -37,3 +37,62 @@ The plan is:
 A scheduler will be implemented that keeps jobs with a schedule
 It will submit a POST to print the job at the right time.
 Schedules should be in CRON format, `0 19 * * 0; Put bins out`
+
+# Windows
+- Install Rust.
+- The USB drivers by default are not compatible.
+- Download Zadig and change to be libusb. 
+- Clone the repo 
+- `cargo run`
+
+# Linux 
+The following commands are needed to run this project (YMMV).
+```
+#install rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+#install required packages
+sudo apt install build-essential libudev-dev  pkg-config
+
+# add current user to the lp group (for permissions). This could be done with a udev rule
+sudo usermod -a -G lp $USER
+
+#clone repo
+git clone git@github.com:seblovett/jobPrinter.git
+cd jobPrinter
+
+# build and run
+cargo run
+```
+
+# Cross compiling
+
+The project runs on a Raspberry Pi Zero 2 W. 
+Building on this is slow (I never managed it).
+
+The Rust way of cross-compiling seems to be to avoid, at all costs, cross-compiling. 
+The below is a summary of a lot of Googling, and to be honest, the solution was begrudgingly obtained from ChatGPT... 
+
+If you are doing something that doesn't require any kernel headers or objects, then it's all straight forward. 
+
+I initially tried to get this working on a RPi Zero W, but [ARMv6 is not supported](https://github.com/cross-rs/cross/wiki/Additional-External-Dependency-Issues).
+
+To "cross" compile, follow these instructions, changing targets where appropriate. 
+(The following should work for a RPi Zero 2 W)
+```
+rustup --target=arm-unknown-linux-gnueabihf
+cd cross-armv7-libudev
+docker build -t local/cross-armv7-libudev -f Dockerfile.armv7-unknown-linux-gnueabihf .
+cd ..
+cross build --target=armv7-unknown-linux-gnueabihf
+
+```
+
+Set up a RPi in your favourite way. This is covered in many places, I won't repeat this here. 
+You may also need to install `libc6-dev` and `libudev-dev`. 
+
+Copy the executable to the device using your favourite copy protocol. 
+
+Run the executable! 
+
+Running in release doesn't seem to work... need to figure out why.

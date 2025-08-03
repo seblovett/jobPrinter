@@ -15,4 +15,4 @@ futures = "0.3.31"
 log = "0.4.27"
 utoipa = {version="5.4.0", features = ["actix_extras"]}
 utoipa-actix-web = "0.1.2"
-utoipa-swagger-ui = {version="9.0.2", features=["actix-web"]}
+utoipa-swagger-ui = {version="9.0.2", features=["actix-web","debug-embed"]}

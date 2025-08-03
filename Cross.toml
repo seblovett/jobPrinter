@@ -1,0 +1,3 @@
+[target.armv7-unknown-linux-gnueabihf]
+image = "local/cross-armv7-libudev"
+rustflags = ["-C", "link-arg=-Wl,-rpath,/usr/lib/arm-linux-gnueabihf"]

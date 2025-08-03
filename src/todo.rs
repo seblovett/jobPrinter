@@ -29,9 +29,14 @@ pub(super) fn configure(store: Data<TodoStore>) -> impl FnOnce(&mut ServiceConfi
     }
 }
 
- fn print(job: Todo) -> PrintResult<()> {
-    let driver = UsbDriver::open(0x0416, 0x5011, None, None)?;
-    Printer::new(driver, Protocol::default(), None)
+fn print(job: Todo, debug: bool) -> PrintResult<()> {
+    if debug {
+        println!("{}", job.title);
+        println!("{}", job.description);
+    } else {
+        
+        let driver = UsbDriver::open(0x0416, 0x5011, None, None)?;
+        Printer::new(driver, Protocol::default(), None)
         .debug_mode(Some(DebugMode::Dec))
         .init()?
         .justify(JustifyMode::CENTER)?
@@ -49,7 +54,7 @@ pub(super) fn configure(store: Data<TodoStore>) -> impl FnOnce(&mut ServiceConfi
         .writeln(&job.description)?
         .feed()?
         .print_cut()?;
-
+    }
     Ok(())
 }
 
@@ -84,6 +89,9 @@ async fn create_todo(todo: Json<Todo>, todo_store: Data<TodoStore>) -> impl Resp
     let mut todos = todo_store.todos.lock().unwrap();
     let todo = &todo.into_inner();
     todos.push(todo.clone());
-    print(todo.clone());
-    HttpResponse::Created().json(todo)
+    match print(todo.clone(), false){
+        Ok(_) => HttpResponse::Created().json(todo),
+        Err(error) =>  HttpResponse::InternalServerError().body(format!("{error:?}")),
+    }
+    
 }
