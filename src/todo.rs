@@ -8,7 +8,7 @@ use actix_web::{
 use serde::{Deserialize, Serialize};
 use utoipa::{ToSchema};
 use utoipa_actix_web::service_config::ServiceConfig;
-
+use tokio_cron_scheduler::{Job, JobScheduler, JobSchedulerError};
 
 #[derive(Default)]
 pub(super) struct TodoStore {
@@ -20,6 +20,24 @@ use escpos::printer::Printer;
 use escpos::utils::*;
 
 const TODO: &str = "todo";
+use tokio::spawn;
+
+async fn job_scheduler(t : Todo) -> Result<(), JobSchedulerError> {
+    let sched = JobScheduler::new().await?;
+    // Add basic cron job
+    sched.add(
+        Job::new(t.schedule.clone().unwrap(), move|_uuid, _l| {
+            println!("I run every 10 seconds");
+
+            let _ = print(t.clone(), false);
+        })?
+    ).await?;
+    
+    // Start the scheduler
+    sched.start().await?;
+
+    Ok(())
+}
 
 pub(super) fn configure(store: Data<TodoStore>) -> impl FnOnce(&mut ServiceConfig) {
     |config: &mut ServiceConfig| {
@@ -67,7 +85,11 @@ struct Todo {
     #[schema(example = "Wash, dry and put all dishes away.")]
     /// The text contents of the task
     description: String,
+
+    #[schema(example = "* */1 * * *")]
+    schedule:Option<String>
 }
+
 
 
 /// Create new Todo to shared in-memory storage.
@@ -87,11 +109,17 @@ struct Todo {
 #[post("")]
 async fn create_todo(todo: Json<Todo>, todo_store: Data<TodoStore>) -> impl Responder {
     let mut todos = todo_store.todos.lock().unwrap();
-    let todo = &todo.into_inner();
     todos.push(todo.clone());
-    match print(todo.clone(), false){
-        Ok(_) => HttpResponse::Created().json(todo),
-        Err(error) =>  HttpResponse::InternalServerError().body(format!("{error:?}")),
+    if todo.schedule.is_some() {
+        println!("{:?}",todo.schedule);
+        spawn(async move { let _ = job_scheduler(todo.clone()).await;});
+        HttpResponse::Created().body("Job Scheduled")
+    } 
+    else {
+        let todo = &todo.into_inner();
+        match print(todo.clone(), false){
+            Ok(_) => HttpResponse::Created().json(todo),
+            Err(error) =>  HttpResponse::InternalServerError().body(format!("{error:?}")),
+        }
     }
-    
 }

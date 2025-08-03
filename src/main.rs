@@ -23,6 +23,9 @@ mod todo;
 async fn main() -> Result<(), impl Error> {
     env_logger::init();
 
+
+    // spawn(async move { todo::job_scheduler().await;});
+
     #[derive(OpenApi)]
     #[openapi(
         tags(
@@ -32,7 +35,7 @@ async fn main() -> Result<(), impl Error> {
     struct ApiDoc;
 
     let store = Data::new(TodoStore::default());
-        HttpServer::new(move || {
+    HttpServer::new(move || {
         App::new()
             .into_utoipa_app()
             .openapi(ApiDoc::openapi())
