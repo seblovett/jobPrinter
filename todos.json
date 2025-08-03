@@ -1,0 +1,9 @@
+[
+    {
+        "schedule": "* 00 19 * * Sun",
+        "todo": {
+            "title": "Bins",
+            "description": "Put the bins out"
+        }
+    }
+]

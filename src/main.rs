@@ -14,7 +14,7 @@ use utoipa::{
 };
 use utoipa_actix_web::AppExt;
 use utoipa_swagger_ui::SwaggerUi;
-
+use tokio::spawn;
 use crate::todo::*;
 
 mod todo;
@@ -22,9 +22,22 @@ mod todo;
 #[actix_web::main]
 async fn main() -> Result<(), impl Error> {
     env_logger::init();
+    // let s = vec![ScheduledTodo];
+    // let mut s :Vec<ScheduledTodo> = Vec::new();
+    // let j = ScheduledTodo{
+    //     schedule:"1.1.1.1".to_string(),
+    //     todo:{Todo{title:"Test".to_string(), description:"Hello".to_string()}}
+    // };
+    // s.push(j);
+    // println!("{:?}", s);
+    // let mut file = File::create("todos.json")?;
+    // file.write_all(serde_json::to_string(&s.clone())?.as_bytes())?;
 
+    // let s = String::from_utf8(read("todos.json")?).unwrap_or("[]".to_string());
+    // let ts : Vec<ScheduledTodo> = serde_json::from_str(&s)?;
+    // println!("{:?}", ts);
 
-    // spawn(async move { todo::job_scheduler().await;});
+    spawn(async move { todo::job_scheduler().await;});
 
     #[derive(OpenApi)]
     #[openapi(

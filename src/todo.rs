@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-
+use std::fs;
 use actix_web::{
     post,
     web::{Data, Json},
@@ -20,19 +20,22 @@ use escpos::printer::Printer;
 use escpos::utils::*;
 
 const TODO: &str = "todo";
-use tokio::spawn;
 
-async fn job_scheduler(t : Todo) -> Result<(), JobSchedulerError> {
+pub async fn job_scheduler() -> Result<(), JobSchedulerError> {
+
     let sched = JobScheduler::new().await?;
-    // Add basic cron job
-    sched.add(
-        Job::new(t.schedule.clone().unwrap(), move|_uuid, _l| {
-            println!("I run every 10 seconds");
+    let s = String::from_utf8(fs::read("todos.json").unwrap_or(b"[]".to_vec())).unwrap_or("[]".to_string());
+    let ts : Vec<ScheduledTodo> = serde_json::from_str(&s).unwrap();
+    println!("{:?}", ts);
 
-            let _ = print(t.clone(), false);
-        })?
-    ).await?;
-    
+    // Add basic cron jobs
+    for t in ts.into_iter(){
+        sched.add(
+            Job::new(t.schedule.clone(), move|_uuid, _l| {
+                let _ = print(t.todo.clone(), false);
+            })?
+        ).await?;
+    }
     // Start the scheduler
     sched.start().await?;
 
@@ -48,10 +51,8 @@ pub(super) fn configure(store: Data<TodoStore>) -> impl FnOnce(&mut ServiceConfi
 }
 
 fn print(job: Todo, debug: bool) -> PrintResult<()> {
-    if debug {
-        println!("{}", job.title);
-        println!("{}", job.description);
-    } else {
+    println!("Printing: {:?}", job);
+    if !debug {
         
         let driver = UsbDriver::open(0x0416, 0x5011, None, None)?;
         Printer::new(driver, Protocol::default(), None)
@@ -78,19 +79,22 @@ fn print(job: Todo, debug: bool) -> PrintResult<()> {
 
 /// Task to do.
 #[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
-struct Todo {
+pub struct Todo {
     /// Description of the tasks to do.
     #[schema(example = "Washing Up")]
-    title: String,
+    pub title: String,
     #[schema(example = "Wash, dry and put all dishes away.")]
     /// The text contents of the task
-    description: String,
+    pub description: String,
 
-    #[schema(example = "* */1 * * *")]
-    schedule:Option<String>
 }
 
-
+#[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
+pub struct ScheduledTodo {
+    #[schema(example = "* */1 * * *")]
+    pub schedule:String, 
+    pub todo :Todo
+}
 
 /// Create new Todo to shared in-memory storage.
 ///
@@ -110,16 +114,9 @@ struct Todo {
 async fn create_todo(todo: Json<Todo>, todo_store: Data<TodoStore>) -> impl Responder {
     let mut todos = todo_store.todos.lock().unwrap();
     todos.push(todo.clone());
-    if todo.schedule.is_some() {
-        println!("{:?}",todo.schedule);
-        spawn(async move { let _ = job_scheduler(todo.clone()).await;});
-        HttpResponse::Created().body("Job Scheduled")
-    } 
-    else {
-        let todo = &todo.into_inner();
-        match print(todo.clone(), false){
-            Ok(_) => HttpResponse::Created().json(todo),
-            Err(error) =>  HttpResponse::InternalServerError().body(format!("{error:?}")),
-        }
+    let todo = &todo.into_inner();
+    match print(todo.clone(), false){
+        Ok(_) => HttpResponse::Created().json(todo),
+        Err(error) =>  HttpResponse::InternalServerError().body(format!("{error:?}")),
     }
 }
